@@ -1,0 +1,21 @@
+{
+  "name": "flowwise-ai-monorepo",
+  "version": "1.0.0",
+  "description": "FlowWise AI Employee Workflow & HR Management System Monorepo",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "test:backend": "npm test --prefix backend",
+    "server": "npm run start --prefix backend",
+    "client": "npm run dev --prefix frontend",
+    "dev:server": "npm run dev --prefix backend"
+  },
+  "keywords": [
+    "mern",
+    "saas",
+    "workflow",
+    "hr-management"
+  ],
+  "author": "FlowWise AI Team",
+  "license": "ISC"
+}
