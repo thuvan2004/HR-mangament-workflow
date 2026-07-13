@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create central Axios instance
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,9 +41,12 @@ api.interceptors.response.use(
         }
 
         // Post to refresh token endpoint
-        const { data } = await axios.post('/api/auth/refresh-token', {
-          token: refreshToken,
-        });
+        const { data } = await axios.post(
+  `${import.meta.env.VITE_API_URL || '/api'}/auth/refresh-token`,
+  { token: refreshToken }
+);
+
+          
 
         const newAccessToken = data.token;
         localStorage.setItem('token', newAccessToken);
