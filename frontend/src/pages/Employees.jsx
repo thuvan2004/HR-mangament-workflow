@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { FiSearch, FiUserPlus, FiEdit2, FiTrash2, FiEye, FiCheck, FiX } from 'react-icons/fi';
+import { FiSearch, FiUserPlus, FiEdit2, FiTrash2, FiEye, FiX } from 'react-icons/fi';
 
 const Employees = () => {
   const { user: currentUser } = useAuth();
@@ -9,6 +9,7 @@ const Employees = () => {
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -37,8 +38,46 @@ const Employees = () => {
 
   const isHrOrAdmin = ['HR', 'Admin'].includes(currentUser?.role);
 
+  // Keep the UI safe even when older/incomplete employee records exist.
+  const getEmployeeName = (emp) => {
+    const value = emp?.name ?? emp?.fullName ?? emp?.user?.name ?? '';
+    const cleaned = String(value).trim();
+    return cleaned || 'Unknown Employee';
+  };
+
+  const getEmployeeEmail = (emp) => {
+    const value = emp?.email ?? emp?.user?.email ?? '';
+    const cleaned = String(value).trim();
+    return cleaned || 'No email';
+  };
+
+  const getEmployeeId = (emp) => emp?._id ?? emp?.id ?? emp?.user?._id ?? '';
+
+  const getDepartmentName = (departmentValue) => {
+    if (!departmentValue) return 'Unassigned';
+    if (typeof departmentValue === 'string') return departmentValue;
+    return departmentValue?.name || 'Unassigned';
+  };
+
+  const getSkillsArray = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+
+    if (typeof value === 'string') {
+      return value.split(',').map((item) => item.trim()).filter(Boolean);
+    }
+
+    return [];
+  };
+
+  const safeEmployees = Array.isArray(employees) ? employees.filter(Boolean) : [];
+  const safeDepartments = Array.isArray(departments) ? departments.filter(Boolean) : [];
+
   const fetchEmployees = async () => {
     setLoading(true);
+    setError('');
+
     try {
       const { data } = await api.get('/employees', {
         params: {
@@ -48,14 +87,31 @@ const Employees = () => {
           status: statusFilter,
           page,
           limit: 8,
-        }
+        },
       });
-      if (data.success) {
-        setEmployees(data.data);
-        setTotalPages(data.pagination.pages);
+
+      const employeeList = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.data?.employees)
+          ? data.data.employees
+          : Array.isArray(data?.employees)
+            ? data.employees
+            : [];
+
+      const pagination = data?.pagination || data?.data?.pagination || {};
+      const pages = Number(pagination?.pages || pagination?.totalPages || 1);
+
+      if (data?.success === false) {
+        throw new Error(data?.message || 'Failed to load employee list');
       }
+
+      setEmployees(employeeList);
+      setTotalPages(Number.isFinite(pages) && pages > 0 ? pages : 1);
     } catch (err) {
-      console.error('Failed to load employee list: ', err.message);
+      console.error('Failed to load employee list:', err);
+      setEmployees([]);
+      setTotalPages(1);
+      setError(err.response?.data?.message || err.message || 'Failed to load employee list');
     } finally {
       setLoading(false);
     }
@@ -64,11 +120,19 @@ const Employees = () => {
   const fetchDeptsAndManagers = async () => {
     try {
       const { data } = await api.get('/employees/departments');
-      if (data.success) {
-        setDepartments(data.data);
-      }
+
+      const departmentList = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.data?.departments)
+          ? data.data.departments
+          : Array.isArray(data?.departments)
+            ? data.departments
+            : [];
+
+      setDepartments(departmentList);
     } catch (err) {
-      console.warn('Depts fetch offline');
+      console.warn('Departments fetch failed:', err.message);
+      setDepartments([]);
     }
   };
 
@@ -95,7 +159,7 @@ const Employees = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const skillsArr = skills ? skills.split(',').map(s => s.trim()) : [];
+      const skillsArr = getSkillsArray(skills);
       const payload = {
         name,
         email,
@@ -119,22 +183,24 @@ const Employees = () => {
   };
 
   const handleOpenEdit = (emp) => {
+    if (!emp) return;
+
     setSelectedEmp(emp);
-    setName(emp.name);
-    setEmail(emp.email);
-    setRole(emp.role);
-    setDesignation(emp.designation);
-    setDepartment(emp.department?._id || emp.department || '');
-    setManager(emp.manager?._id || emp.manager || '');
-    setSkills(emp.skills ? emp.skills.join(', ') : '');
-    setStatus(emp.status);
+    setName(getEmployeeName(emp) === 'Unknown Employee' ? '' : getEmployeeName(emp));
+    setEmail(getEmployeeEmail(emp) === 'No email' ? '' : getEmployeeEmail(emp));
+    setRole(emp?.role || 'Employee');
+    setDesignation(emp?.designation || 'Software Engineer');
+    setDepartment(emp?.department?._id || emp?.department?.id || (typeof emp?.department === 'string' ? emp.department : ''));
+    setManager(emp?.manager?._id || emp?.manager?.id || (typeof emp?.manager === 'string' ? emp.manager : ''));
+    setSkills(getSkillsArray(emp?.skills).join(', '));
+    setStatus(emp?.status || 'Active');
     setShowEditModal(true);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const skillsArr = skills ? skills.split(',').map(s => s.trim()) : [];
+      const skillsArr = getSkillsArray(skills);
       const payload = {
         name,
         role,
@@ -145,7 +211,12 @@ const Employees = () => {
         manager: manager || null,
       };
 
-      const { data } = await api.put(`/employees/${selectedEmp._id || selectedEmp.id}`, payload);
+      const employeeId = getEmployeeId(selectedEmp);
+      if (!employeeId) {
+        throw new Error('Employee ID is missing');
+      }
+
+      const { data } = await api.put(`/employees/${employeeId}`, payload);
       if (data.success) {
         setShowEditModal(false);
         fetchEmployees();
@@ -156,6 +227,11 @@ const Employees = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) {
+      alert('Employee ID is missing');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this user profile?')) return;
     try {
       await api.delete(`/employees/${id}`);
@@ -206,9 +282,14 @@ const Employees = () => {
           className="px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-xs focus:outline-none text-slate-650 dark:text-slate-300 font-semibold"
         >
           <option value="">All Departments</option>
-          {departments.map(d => (
-            <option key={d._id} value={d._id}>{d.name}</option>
-          ))}
+          {safeDepartments.map((d, index) => {
+            const deptId = d?._id || d?.id || String(d?.name || index);
+            return (
+              <option key={deptId} value={d?._id || d?.id || ''}>
+                {d?.name || 'Unnamed Department'}
+              </option>
+            );
+          })}
         </select>
 
         {/* Role Filter */}
@@ -259,22 +340,28 @@ const Employees = () => {
                     Fetching records...
                   </td>
                 </tr>
-              ) : employees.length === 0 ? (
+              ) : error ? (
+                <tr>
+                  <td colSpan="6" className="p-12 text-center text-rose-500 font-semibold">
+                    {error}
+                  </td>
+                </tr>
+              ) : safeEmployees.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-12 text-center text-slate-400 font-semibold">
                     No active staff matches found.
                   </td>
                 </tr>
               ) : (
-                employees.map((emp) => (
-                  <tr key={emp._id} className="hover:bg-slate-50 dark:hover:bg-slate-850/30 text-slate-750 dark:text-slate-300">
+                safeEmployees.map((emp, index) => (
+                  <tr key={getEmployeeId(emp) || `employee-${index}`} className="hover:bg-slate-50 dark:hover:bg-slate-850/30 text-slate-750 dark:text-slate-300">
                     <td className="p-4 px-6 flex items-center space-x-3.5">
                       <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 font-bold flex items-center justify-center">
-                        {emp.name.charAt(0)}
+                        {getEmployeeName(emp).charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <span className="font-semibold text-slate-850 dark:text-slate-200 block">{emp.name}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">{emp.email}</span>
+                        <span className="font-semibold text-slate-850 dark:text-slate-200 block">{getEmployeeName(emp)}</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">{getEmployeeEmail(emp)}</span>
                       </div>
                     </td>
                     <td className="p-4">
@@ -284,11 +371,11 @@ const Employees = () => {
                         emp.role === 'Manager' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                         'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700/60'
                       }`}>
-                        {emp.role}
+                        {emp?.role || 'Employee'}
                       </span>
                     </td>
-                    <td className="p-4">{emp.department?.name || 'Unassigned'}</td>
-                    <td className="p-4">{emp.designation}</td>
+                    <td className="p-4">{getDepartmentName(emp?.department)}</td>
+                    <td className="p-4">{emp?.designation || 'Not specified'}</td>
                     <td className="p-4">
                       <span className={`flex items-center space-x-1.5 ${
                         emp.status === 'Active' ? 'text-emerald-500' :
@@ -300,7 +387,7 @@ const Employees = () => {
                           emp.status === 'Suspended' ? 'bg-rose-500' :
                           'bg-slate-400'
                         }`} />
-                        <span>{emp.status}</span>
+                        <span>{emp?.status || 'Inactive'}</span>
                       </span>
                     </td>
                     <td className="p-4 px-6 text-center space-x-2">
@@ -320,9 +407,9 @@ const Employees = () => {
                           >
                             <FiEdit2 size={13} />
                           </button>
-                          {currentUser.role === 'Admin' && (
+                          {currentUser?.role === 'Admin' && (
                             <button
-                              onClick={() => handleDelete(emp._id)}
+                              onClick={() => handleDelete(getEmployeeId(emp))}
                               className="p-2 bg-slate-100 dark:bg-slate-800 hover:text-rose-500 rounded-xl transition-colors cursor-pointer"
                               title="Delete profile"
                             >
@@ -378,26 +465,26 @@ const Employees = () => {
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Name</span>
-                <span className="font-semibold text-slate-850 dark:text-slate-200 text-sm mt-1 block">{selectedEmp.name}</span>
+                <span className="font-semibold text-slate-850 dark:text-slate-200 text-sm mt-1 block">{getEmployeeName(selectedEmp)}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Email</span>
-                <span className="font-semibold text-slate-850 dark:text-slate-200 text-sm mt-1 block">{selectedEmp.email}</span>
+                <span className="font-semibold text-slate-850 dark:text-slate-200 text-sm mt-1 block">{getEmployeeEmail(selectedEmp)}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Role / Designation</span>
-                <span className="font-semibold text-slate-850 dark:text-slate-200 mt-1 block">{selectedEmp.role} / {selectedEmp.designation}</span>
+                <span className="font-semibold text-slate-850 dark:text-slate-200 mt-1 block">{selectedEmp?.role || 'Employee'} / {selectedEmp?.designation || 'Not specified'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Department</span>
-                <span className="font-semibold text-slate-850 dark:text-slate-200 mt-1 block">{selectedEmp.department?.name || 'Unassigned'}</span>
+                <span className="font-semibold text-slate-850 dark:text-slate-200 mt-1 block">{getDepartmentName(selectedEmp?.department)}</span>
               </div>
               <div className="col-span-2">
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px] mb-1">Skills Stack</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedEmp.skills && selectedEmp.skills.length > 0 ? (
-                    selectedEmp.skills.map(s => (
-                      <span key={s} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 border border-indigo-500/10 rounded font-semibold text-[10px]">
+                  {getSkillsArray(selectedEmp?.skills).length > 0 ? (
+                    getSkillsArray(selectedEmp?.skills).map((s, index) => (
+                      <span key={`${s}-${index}`} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-500 border border-indigo-500/10 rounded font-semibold text-[10px]">
                         {s}
                       </span>
                     ))
@@ -408,11 +495,11 @@ const Employees = () => {
               </div>
               <div className="col-span-2 border-t border-slate-100 dark:border-slate-800/80 pt-3">
                 <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px] mb-1">Emergency Contacts</span>
-                {selectedEmp.emergencyContacts && selectedEmp.emergencyContacts.length > 0 ? (
-                  selectedEmp.emergencyContacts.map((c, i) => (
+                {Array.isArray(selectedEmp?.emergencyContacts) && selectedEmp.emergencyContacts.length > 0 ? (
+                  selectedEmp.emergencyContacts.filter(Boolean).map((c, i) => (
                     <div key={i} className="flex justify-between mt-1 text-slate-700 dark:text-slate-350">
-                      <span>{c.name} ({c.relation})</span>
-                      <span className="font-semibold">{c.phone}</span>
+                      <span>{c?.name || 'Unnamed'} ({c?.relation || 'Contact'})</span>
+                      <span className="font-semibold">{c?.phone || 'No phone'}</span>
                     </div>
                   ))
                 ) : (
@@ -500,9 +587,14 @@ const Employees = () => {
                     className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-350 focus:outline-none"
                   >
                     <option value="">Select Dept</option>
-                    {departments.map(d => (
-                      <option key={d._id} value={d._id}>{d.name}</option>
-                    ))}
+                    {safeDepartments.map((d, index) => {
+                      const deptId = d?._id || d?.id || String(d?.name || index);
+                      return (
+                        <option key={deptId} value={d?._id || d?.id || ''}>
+                          {d?.name || 'Unnamed Department'}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -592,9 +684,14 @@ const Employees = () => {
                     className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-350 focus:outline-none"
                   >
                     <option value="">Unassigned</option>
-                    {departments.map(d => (
-                      <option key={d._id} value={d._id}>{d.name}</option>
-                    ))}
+                    {safeDepartments.map((d, index) => {
+                      const deptId = d?._id || d?.id || String(d?.name || index);
+                      return (
+                        <option key={deptId} value={d?._id || d?.id || ''}>
+                          {d?.name || 'Unnamed Department'}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
