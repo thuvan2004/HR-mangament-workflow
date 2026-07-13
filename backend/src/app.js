@@ -18,18 +18,40 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 
+// Allowed frontend URLs
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://hrmangament.netlify.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 // Secure headers
-app.use(helmet({
-  crossOriginResourcePolicy: false, // Allow static local images to load in browser
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
 
-// Cross Origin requests
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // React app development server urls
-  credentials: true,
-}));
+// Cross-Origin requests
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests without an origin, such as Postman or server requests
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
 
-// Request Logger
+      console.error(`[CORS] Blocked origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// Request logger
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
@@ -38,13 +60,16 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded assets fallback folder
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+// Serve uploaded assets
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../public/uploads'))
+);
 
-// Apply rate limiter to all APIs
+// Apply rate limiter to all API routes
 app.use('/api', apiLimiter);
 
-// Bind API Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/workflows', workflowRoutes);
@@ -52,17 +77,23 @@ app.use('/api/requests', requestRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Base route checklist
+// Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy', uptime: process.uptime() });
+  res.status(200).json({
+    status: 'healthy',
+    uptime: process.uptime(),
+  });
 });
 
-// Unknown Routes handling
-app.use((req, res, next) => {
-  res.status(404).json({ success: false, message: 'API endpoint route not found' });
+// Unknown route handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'API endpoint route not found',
+  });
 });
 
-// Global Error Middleware
+// Global error middleware
 app.use(errorHandler);
 
 module.exports = app;

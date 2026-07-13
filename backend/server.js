@@ -8,51 +8,69 @@ dotenv.config();
 const app = require('./src/app');
 const connectDB = require('./src/config/db');
 
-// Connect to MongoDB Database
+// Connect to MongoDB
 connectDB();
 
 const PORT = process.env.PORT || 5000;
 
+// Allowed frontend URLs for Socket.IO
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'https://hrmangament.netlify.app',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 // Create HTTP server
 const server = http.createServer(app);
 
-// Initialize Socket.IO with CORS
+// Initialize Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   },
 });
 
-// Store io in express application instance
+// Store Socket.IO instance in Express app
 app.set('io', io);
 
-// Socket.IO orchestration
+// Socket.IO connection
 io.on('connection', (socket) => {
   console.log(`[Socket.IO] Client connected: ${socket.id}`);
 
-  // User authenticates and joins a private room based on their Mongoose User ID
+  // Join private notification room
   socket.on('join_room', (userId) => {
     if (userId) {
-      socket.join(userId.toString());
-      console.log(`[Socket.IO] User ${userId} joined their notification room.`);
+      const roomId = userId.toString();
+
+      socket.join(roomId);
+
+      console.log(
+        `[Socket.IO] User ${roomId} joined their notification room.`
+      );
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log(`[Socket.IO] Client disconnected: ${socket.id}`);
+  socket.on('disconnect', (reason) => {
+    console.log(
+      `[Socket.IO] Client disconnected: ${socket.id}, reason: ${reason}`
+    );
   });
 });
 
-// Run Server listener
+// Start server
 server.listen(PORT, () => {
-  console.log(`[Server] FlowWise AI backend running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  console.log(
+    `[Server] FlowWise AI backend running in ${
+      process.env.NODE_ENV || 'development'
+    } mode on port ${PORT}`
+  );
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.error(`[Fatal Unhandled Error]: ${err.message}`);
-  // Close server & exit process
-  // server.close(() => process.exit(1));
+process.on('unhandledRejection', (error) => {
+  console.error(`[Fatal Unhandled Error]: ${error.message}`);
 });
