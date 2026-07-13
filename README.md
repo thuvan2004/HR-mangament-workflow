@@ -71,3 +71,9 @@ cd backend
 npm test
 ```
 Tests will print pass/fail results directly to the console.
+## Live Demo
+https://hrmangament.netlify.app
+
+## Demo Credentials
+Email: demo@flowwise.com
+Password: Demo@123
