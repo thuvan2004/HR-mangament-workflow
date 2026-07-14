@@ -6,7 +6,7 @@ import { FiMail, FiLock, FiCpu } from 'react-icons/fi';
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,21 +29,33 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Basic client-side validation
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password.');
+      return;
+    }
+
     setLoading(true);
 
-    const result = await login(email, password);
-    setLoading(false);
+    try {
+      const result = await login(email.trim(), password);
 
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.message);
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.message || 'Invalid credentials. Please try again.');
+      }
+    } catch (err) {
+      setError('Something went wrong. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden workflow-grid-bg">
-      
+
       {/* Background Ambient Glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
 
@@ -63,8 +75,8 @@ const Login = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 py-8 px-6 shadow-glass rounded-3xl sm:px-10">
-          
-          <form className="space-y-6" onSubmit={handleSubmit}>
+
+          <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             {error && (
               <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-semibold leading-relaxed">
                 {error}
@@ -83,7 +95,7 @@ const Login = () => {
                 <input
                   id="email"
                   type="email"
-                  required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 bg-slate-850 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/35 focus:border-indigo-500"
@@ -111,7 +123,7 @@ const Login = () => {
                 <input
                   id="password"
                   type="password"
-                  required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 bg-slate-850 border border-slate-800 rounded-xl text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/35 focus:border-indigo-500"
@@ -132,7 +144,7 @@ const Login = () => {
             </div>
           </form>
 
-          {/* Quick Demologin Selector */}
+          {/* Quick Demo Login Selector */}
           <div className="mt-8 border-t border-slate-800 pt-6">
             <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-3 text-center flex items-center justify-center">
               <FiCpu className="mr-1.5" /> Fast Demo Accounts
@@ -141,6 +153,7 @@ const Login = () => {
               {demoUsers.map((u) => (
                 <button
                   key={u.label}
+                  type="button"
                   onClick={() => handleDemoFill(u)}
                   className="px-3 py-2 rounded-xl bg-slate-850 border border-slate-800 text-[10px] font-semibold text-slate-400 hover:bg-indigo-950/20 hover:text-indigo-400 hover:border-indigo-500/50 transition-colors cursor-pointer text-center"
                 >
