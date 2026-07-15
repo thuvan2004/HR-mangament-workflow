@@ -84,6 +84,11 @@ app.use(
   express.static(path.join(__dirname, '../public/uploads'))
 );
 
+// Trust proxy for rate limiting (Railway)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Apply rate limiter to API routes
 app.use('/api', apiLimiter);
 
