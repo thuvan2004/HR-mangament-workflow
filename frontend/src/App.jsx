@@ -15,12 +15,14 @@ import AIAssistant from './components/AIAssistant';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
+import DashboardSwitcher from './pages/dashboard/DashboardSwitcher';
 import RequestManager from './pages/RequestManager';
 import WorkflowBuilder from './pages/WorkflowBuilder';
 import Employees from './pages/Employees';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
+import AssetTracking from './pages/AssetTracking';
 
 // Auth Route Guard
 const ProtectedRoute = ({ allowedRoles }) => {
@@ -112,18 +114,20 @@ const AppContent = () => {
           <Route element={<DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)} />}>
             
             {/* Common dashboard pages */}
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<DashboardSwitcher />} />
             <Route path="/requests" element={<RequestManager />} />
             <Route path="/employees" element={<Employees />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/assets" element={<AssetTracking />} />
 
             {/* Manager and HR specific routes */}
-            <Route element={<ProtectedRoute allowedRoles={['Manager', 'HR', 'Admin']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['manager', 'hr', 'admin']} />}>
               <Route path="/analytics" element={<Analytics />} />
             </Route>
             
             {/* HR / Admin explicit templates routes */}
-            <Route element={<ProtectedRoute allowedRoles={['HR', 'Admin']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['hr', 'admin']} />}>
               <Route path="/workflows" element={<WorkflowBuilder />} />
             </Route>
 

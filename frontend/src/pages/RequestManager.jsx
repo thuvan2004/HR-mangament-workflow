@@ -4,8 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import Timeline from '../components/Timeline';
 import { 
   FiFileText, FiPlus, FiX, FiCheckCircle, FiXCircle, 
-  FiMessageSquare, FiCpu, FiTrendingUp, FiCheck, FiPaperclip 
+  FiMessageSquare, FiCpu, FiTrendingUp, FiCheck, FiPaperclip,
+  FiDownload
 } from 'react-icons/fi';
+import { exportToPDF, exportToExcel } from '../utils/exportUtils';
 
 const RequestManager = () => {
   const { user } = useAuth();
@@ -181,12 +183,44 @@ const RequestManager = () => {
           <p className="text-sm text-slate-400 mt-1">Submit new claims, schedule holidays, request hardware assets, or approve team tickets.</p>
         </div>
         
-        <button
-          onClick={() => setShowSubmitModal(true)}
-          className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-650 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-glass cursor-pointer transition-colors shrink-0 text-sm"
-        >
-          <FiPlus size={16} /> <span>Submit Request</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => exportToPDF(
+              requests, 
+              [
+                { label: 'ID', key: '_id' },
+                { label: 'Type', key: 'requestType' },
+                { label: 'Subject', key: 'title' },
+                { label: 'Status', key: 'status' }
+              ],
+              'Requests Report'
+            )}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-colors text-sm"
+          >
+            <FiDownload size={16} /> <span>PDF</span>
+          </button>
+          <button
+            onClick={() => exportToExcel(
+              requests.map(r => ({
+                ID: r._id,
+                Type: r.requestType,
+                Subject: r.title,
+                Priority: r.priority,
+                Status: r.status,
+                Requester: r.user?.name || ''
+              }))
+            )}
+            className="flex items-center space-x-2 px-4 py-2.5 bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-xl font-bold transition-colors text-sm"
+          >
+            <FiDownload size={16} /> <span>Excel</span>
+          </button>
+          <button
+            onClick={() => setShowSubmitModal(true)}
+            className="flex items-center space-x-2 px-5 py-2.5 bg-indigo-650 hover:bg-indigo-500 text-white rounded-xl font-bold shadow-glass cursor-pointer transition-colors shrink-0 text-sm"
+          >
+            <FiPlus size={16} /> <span>Submit Request</span>
+          </button>
+        </div>
       </div>
 
       {/* 2. Tabs Selector */}

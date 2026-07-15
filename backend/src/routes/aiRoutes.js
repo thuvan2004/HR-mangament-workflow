@@ -10,6 +10,6 @@ const router = express.Router();
 
 router.post('/assistant', protect, getAIAssistantResponse);
 router.get('/suggest/:requestId', protect, getAIApprovalSuggestion);
-router.get('/insights', protect, authorize('Manager', 'HR', 'Admin'), getAIEmployeeInsights);
+router.get('/insights', protect, authorize('manager', 'hr', 'admin'), getAIEmployeeInsights);
 
 module.exports = router;

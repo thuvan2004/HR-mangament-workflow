@@ -3,26 +3,67 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   FiGrid, FiUsers, FiGitBranch, FiBriefcase, 
-  FiTrendingUp, FiSettings, FiLogOut, FiChevronLeft, FiChevronRight 
+  FiTrendingUp, FiSettings, FiLogOut, FiChevronLeft, FiChevronRight,
+  FiCalendar, FiMonitor
 } from 'react-icons/fi';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const menuItems = [
-    { name: 'Dashboard', path: '/', icon: FiGrid, roles: ['Employee', 'Manager', 'HR', 'Admin'] },
-    { name: 'Requests Portal', path: '/requests', icon: FiBriefcase, roles: ['Employee', 'Manager', 'HR', 'Admin'] },
-    { name: 'Workflow Builder', path: '/workflows', icon: FiGitBranch, roles: ['HR', 'Admin'] },
-    { name: 'Employee Directory', path: '/employees', icon: FiUsers, roles: ['Employee', 'Manager', 'HR', 'Admin'] },
-    { name: 'System Analytics', path: '/analytics', icon: FiTrendingUp, roles: ['Manager', 'HR', 'Admin'] },
-    { name: 'User Settings', path: '/settings', icon: FiSettings, roles: ['Employee', 'Manager', 'HR', 'Admin'] },
-  ];
+  const getMenuItems = (role) => {
+    const baseItems = [];
+    switch (role) {
+      case 'employee':
+        return [
+          { name: 'Dashboard', path: '/', icon: FiGrid },
+          { name: 'My Requests', path: '/requests', icon: FiBriefcase },
+          { name: 'Calendar', path: '/calendar', icon: FiCalendar },
+          { name: 'My Assets', path: '/assets', icon: FiMonitor },
+          { name: 'Profile', path: '/settings', icon: FiUsers },
+          { name: 'Settings', path: '/settings', icon: FiSettings },
+        ];
+      case 'manager':
+        return [
+          { name: 'Dashboard', path: '/', icon: FiGrid },
+          { name: 'Team Requests', path: '/requests', icon: FiBriefcase },
+          { name: 'Approvals', path: '/requests?filter=approvals', icon: FiBriefcase },
+          { name: 'Calendar', path: '/calendar', icon: FiCalendar },
+          { name: 'Team Assets', path: '/assets', icon: FiMonitor },
+          { name: 'Reports', path: '/analytics', icon: FiTrendingUp },
+          { name: 'Settings', path: '/settings', icon: FiSettings },
+        ];
+      case 'hr':
+        return [
+          { name: 'Dashboard', path: '/', icon: FiGrid },
+          { name: 'Employees', path: '/employees', icon: FiUsers },
+          { name: 'Requests', path: '/requests', icon: FiBriefcase },
+          { name: 'Calendar', path: '/calendar', icon: FiCalendar },
+          { name: 'Asset Tracking', path: '/assets', icon: FiMonitor },
+          { name: 'Reports', path: '/analytics', icon: FiTrendingUp },
+          { name: 'Audit Logs', path: '/analytics?tab=audit', icon: FiTrendingUp },
+          { name: 'Settings', path: '/settings', icon: FiSettings },
+        ];
+      case 'admin':
+        return [
+          { name: 'Dashboard', path: '/', icon: FiGrid },
+          { name: 'User Management', path: '/employees', icon: FiUsers },
+          { name: 'Requests', path: '/requests', icon: FiBriefcase },
+          { name: 'Calendar', path: '/calendar', icon: FiCalendar },
+          { name: 'Asset Tracking', path: '/assets', icon: FiMonitor },
+          { name: 'Analytics', path: '/analytics', icon: FiTrendingUp },
+          { name: 'Audit Logs', path: '/analytics?tab=audit', icon: FiTrendingUp },
+          { name: 'AI Insights', path: '/workflows', icon: FiGitBranch },
+          { name: 'Settings', path: '/settings', icon: FiSettings },
+        ];
+      default:
+        return [
+          { name: 'Dashboard', path: '/', icon: FiGrid },
+        ];
+    }
+  };
 
-  // Filter menu items by active user role
-  const allowedMenuItems = menuItems.filter(item => 
-    user && item.roles.includes(user.role)
-  );
+  const allowedMenuItems = user ? getMenuItems(user.role) : [];
 
   return (
     <aside className={`bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-300 flex flex-col z-30 min-h-screen ${collapsed ? 'w-20' : 'w-64'}`}>

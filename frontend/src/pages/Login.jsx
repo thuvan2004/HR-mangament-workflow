@@ -20,10 +20,24 @@ const Login = () => {
     { label: 'Sys Admin', email: 'admin@flowwise.com', pass: 'adminpassword123' }
   ];
 
-  const handleDemoFill = (user) => {
+  const handleDemoFill = async (user) => {
     setEmail(user.email);
     setPassword(user.pass);
     setError('');
+
+    setLoading(true);
+    try {
+      const result = await login(user.email, user.pass);
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.message || 'Invalid demo credentials. Please check backend seeder.');
+      }
+    } catch (err) {
+      setError('Connection error.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -57,24 +71,24 @@ const Login = () => {
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden workflow-grid-bg">
 
       {/* Background Ambient Glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="flex justify-center items-center space-x-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-glass glow-indigo">
+          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-sm">
             F
           </div>
-          <span className="text-3xl font-extrabold text-white tracking-wider uppercase">
-            FlowWise<span className="text-indigo-400">AI</span>
+          <span className="text-3xl font-extrabold text-slate-800 dark:text-white tracking-wider uppercase">
+            FlowWise<span className="text-indigo-500">AI</span>
           </span>
         </div>
-        <h2 className="mt-6 text-center text-xl font-bold tracking-tight text-slate-300">
+        <h2 className="mt-6 text-center text-xl font-bold tracking-tight text-slate-600 dark:text-slate-300">
           Sign in to your enterprise account
         </h2>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800/80 py-8 px-6 shadow-glass rounded-3xl sm:px-10">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-8 px-6 shadow-sm rounded-3xl sm:px-10">
 
           <form className="space-y-6" onSubmit={handleSubmit} noValidate>
             {error && (

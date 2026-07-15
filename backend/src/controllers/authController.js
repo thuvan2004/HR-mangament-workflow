@@ -6,18 +6,20 @@ const sendEmail = require('../utils/email');
 
 // Helper to generate access tokens
 const getAccessToken = (user) => {
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is not defined');
   return jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET || 'super_secret_flowwise_access_token_key_2026_jwt_token',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
   );
 };
 
 // Helper to generate refresh tokens
 const getRefreshToken = (user) => {
+  if (!process.env.JWT_REFRESH_SECRET) throw new Error('JWT_REFRESH_SECRET is not defined');
   return jwt.sign(
     { id: user._id },
-    process.env.JWT_REFRESH_SECRET || 'super_secret_flowwise_refresh_token_key_2026_jwt_token',
+    process.env.JWT_REFRESH_SECRET,
     { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
   );
 };
@@ -43,7 +45,7 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password,
-      role: role || 'Employee',
+      role: role || 'employee',
       designation,
       skills: skills || [],
       verificationToken,
@@ -54,7 +56,8 @@ const registerUser = async (req, res, next) => {
     const protocol = req.protocol;
     const host = req.get('host');
     const verifyUrl = `${protocol}://${host}/api/auth/verify/${verificationToken}`;
-    const clientVerifyUrl = `http://localhost:5173/verify-email?token=${verificationToken}`;
+    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const clientVerifyUrl = `${frontendBase}/verify-email?token=${verificationToken}`;
 
     const message = `Welcome to FlowWise AI. Please verify your email by clicking: \n\n ${clientVerifyUrl} (Client Route)\n\nOr backend API route: ${verifyUrl}`;
 
@@ -201,7 +204,8 @@ const refreshToken = async (req, res, next) => {
     }
 
     // Verify refresh token
-    jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'super_secret_flowwise_refresh_token_key_2026_jwt_token', (err, decoded) => {
+    if (!process.env.JWT_REFRESH_SECRET) throw new Error('JWT_REFRESH_SECRET is not defined');
+    jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
       if (err || user._id.toString() !== decoded.id) {
         return res.status(403).json({ success: false, message: 'Invalid or expired refresh token' });
       }
@@ -269,7 +273,8 @@ const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // Create client URL
-    const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+    const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendBase}/reset-password?token=${resetToken}`;
     const message = `You requested a password reset at FlowWise AI. Please click: \n\n ${resetUrl}`;
 
     try {

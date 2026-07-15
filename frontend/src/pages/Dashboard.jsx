@@ -7,9 +7,10 @@ import {
 } from 'recharts';
 import { 
   FiUsers, FiGitBranch, FiClock, FiAlertTriangle, FiArrowRight, 
-  FiFileText, FiAward, FiZap 
+  FiFileText, FiAward, FiZap, FiDownload 
 } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
+import { exportToPDF, exportToExcel } from '../utils/exportUtils';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -76,15 +77,51 @@ const Dashboard = () => {
           </p>
         </div>
         
-        {/* Dynamic AI Recommendation Widget */}
-        <div className="flex items-center space-x-3.5 bg-indigo-500/10 dark:bg-indigo-950/20 border border-indigo-500/25 rounded-2xl p-3 px-4.5 max-w-md shadow-sm">
-          <FiZap className="text-indigo-500 shrink-0 animate-bounce" size={20} />
-          <div className="text-left">
-            <span className="text-[10px] font-bold tracking-wider text-indigo-400 uppercase block">FlowWise AI Advisory</span>
-            <p className="text-xs text-slate-700 dark:text-indigo-200 mt-0.5 leading-relaxed font-semibold">
-              {aiInsight || "Pending approvals SLA compliance looks optimal. Restock hardware components forecasted requirements."}
-            </p>
+        {/* Dynamic AI Recommendation Widget & Export Buttons */}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex items-center space-x-3.5 bg-indigo-500/10 dark:bg-indigo-950/20 border border-indigo-500/25 rounded-2xl p-3 px-4.5 max-w-md shadow-sm">
+            <FiZap className="text-indigo-500 shrink-0 animate-bounce" size={20} />
+            <div className="text-left">
+              <span className="text-[10px] font-bold tracking-wider text-indigo-400 uppercase block">FlowWise AI Advisory</span>
+              <p className="text-xs text-slate-700 dark:text-indigo-200 mt-0.5 leading-relaxed font-semibold">
+                {aiInsight || "Pending approvals SLA compliance looks optimal. Restock hardware components forecasted requirements."}
+              </p>
+            </div>
           </div>
+          
+          {['Manager', 'HR', 'Admin'].includes(user?.role) && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportToPDF(
+                  recentActivities, 
+                  [
+                    { label: 'Timestamp', key: 'timestamp' },
+                    { label: 'User', key: 'user' },
+                    { label: 'Details', key: 'details' }
+                  ],
+                  'System Activities Report'
+                )}
+                className="flex items-center space-x-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-colors text-xs"
+                title="Export PDF"
+              >
+                <FiDownload size={14} /> <span>PDF</span>
+              </button>
+              <button
+                onClick={() => exportToExcel(
+                  recentActivities.map(a => ({
+                    Timestamp: new Date(a.timestamp).toLocaleString(),
+                    User: a.user,
+                    Action: a.details
+                  })),
+                  'system_activities.xlsx'
+                )}
+                className="flex items-center space-x-2 px-3 py-2 bg-emerald-100 dark:bg-emerald-900/30 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 rounded-xl font-bold transition-colors text-xs"
+                title="Export Excel"
+              >
+                <FiDownload size={14} /> <span>Excel</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

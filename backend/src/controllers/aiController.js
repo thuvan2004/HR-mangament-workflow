@@ -117,7 +117,45 @@ const getAIApprovalSuggestion = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Request not found' });
     }
 
-    // Dynamic heuristic simulation
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { GoogleGenAI } = require('@google/generative-ai');
+        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const prompt = `
+          Analyze the following HR workflow request and provide an approval recommendation.
+          Return ONLY a valid JSON object matching this schema:
+          {
+            "recommendation": "Approve" | "Reject" | "Review",
+            "confidence": number (0-100),
+            "reasoning": "A concise explanation of why"
+          }
+
+          Request details:
+          Type: ${request.requestType}
+          User: ${request.user.name} (Role: ${request.user.role})
+          Details: ${JSON.stringify(request.details)}
+          User Leave Balance (if applicable): ${JSON.stringify(request.user.leaveBalance)}
+        `;
+
+        const result = await model.generateContent(prompt);
+        let text = result.response.text();
+        
+        // Clean markdown JSON formatting if present
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const aiData = JSON.parse(text);
+
+        return res.status(200).json({
+          success: true,
+          data: aiData
+        });
+      } catch (err) {
+        console.error('[Gemini AI Suggest Error]', err.message);
+      }
+    }
+
+    // Dynamic heuristic simulation (Fallback)
     let recommendation = 'Approve';
     let confidence = 90;
     let reasoning = 'Request complies with normal parameters.';
@@ -152,11 +190,7 @@ const getAIApprovalSuggestion = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: {
-        recommendation,
-        confidence,
-        reasoning,
-      }
+      data: { recommendation, confidence, reasoning }
     });
   } catch (error) {
     next(error);
@@ -168,11 +202,46 @@ const getAIApprovalSuggestion = async (req, res, next) => {
 // @access  Private (Managers / HR / Admin)
 const getAIEmployeeInsights = async (req, res, next) => {
   try {
-    // Generate intelligent insights based on active employees database
     const employeesCount = await User.countDocuments();
     const sickLeaves = await Request.countDocuments({ requestType: 'Leave', 'details.leaveType': 'sick', status: 'Approved' });
     const pendingRequests = await Request.countDocuments({ status: 'Pending' });
 
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { GoogleGenAI } = require('@google/generative-ai');
+        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+        const prompt = `
+          You are an HR analytics AI. Analyze these system stats:
+          Total Employees: ${employeesCount}
+          Approved Sick Leaves: ${sickLeaves}
+          Pending Workflow Requests: ${pendingRequests}
+
+          Generate exactly 3 intelligent HR insights based on this data.
+          Return ONLY a valid JSON array of objects matching this schema:
+          [
+            {
+              "title": "Short title",
+              "metric": "Highlight metric string",
+              "description": "Insight description",
+              "type": "success" | "warning" | "info"
+            }
+          ]
+        `;
+
+        const result = await model.generateContent(prompt);
+        let text = result.response.text();
+        text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const aiData = JSON.parse(text);
+
+        return res.status(200).json({ success: true, data: aiData });
+      } catch (err) {
+        console.error('[Gemini AI Insights Error]', err.message);
+      }
+    }
+
+    // Fallback heuristic insights
     const insights = [
       {
         title: 'Department Productivity Balance',

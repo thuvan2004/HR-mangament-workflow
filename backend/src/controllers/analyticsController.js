@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Request = require('../models/Request');
 const Department = require('../models/Department');
+const AuditLog = require('../models/AuditLog');
 
 // @desc    Get dashboard metrics & chart data based on user role
 // @route   GET /api/analytics/dashboard
@@ -118,6 +119,38 @@ const getDashboardMetrics = async (req, res, next) => {
   }
 };
 
+// @desc    Get system audit logs
+// @route   GET /api/analytics/audit-logs
+// @access  Private (Admin/HR only)
+const getAuditLogs = async (req, res, next) => {
+  try {
+    if (!['Admin', 'HR'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to view audit logs' });
+    }
+
+    const { limit = 50, page = 1 } = req.query;
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+
+    const logs = await AuditLog.find()
+      .populate('user', 'name role email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit, 10));
+
+    const total = await AuditLog.countDocuments();
+
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      total,
+      data: logs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getDashboardMetrics,
+  getAuditLogs,
 };

@@ -15,6 +15,7 @@ const workflowRoutes = require('./routes/workflowRoutes');
 const requestRoutes = require('./routes/requestRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/api/workflows', workflowRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

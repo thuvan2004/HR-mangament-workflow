@@ -34,12 +34,12 @@ const notifyUser = async (req, recipientId, senderId, message, requestId, type) 
 
 // Helper to guess next approver based on role and request context
 const findApproverForRole = async (role, requester) => {
-  if (role === 'Manager') {
+  if (role === 'manager') {
     // Return requester's manager, otherwise fallback to any Manager/HR
     if (requester.manager) {
       return requester.manager;
     }
-    const fallbackManager = await User.findOne({ role: 'Manager', status: 'Active' });
+    const fallbackManager = await User.findOne({ role: 'manager', status: 'Active' });
     if (fallbackManager) return fallbackManager._id;
   }
   
@@ -81,8 +81,8 @@ const createRequest = async (req, res, next) => {
     } else {
       // Default: 1. Manager -> 2. HR
       steps = [
-        { stepNumber: 1, role: 'Manager', label: 'Manager Review', status: 'Pending' },
-        { stepNumber: 2, role: 'HR', label: 'HR Finalization', status: 'Pending' }
+        { stepNumber: 1, role: 'manager', label: 'Manager Review', status: 'Pending' },
+        { stepNumber: 2, role: 'hr', label: 'HR Finalization', status: 'Pending' }
       ];
     }
 
@@ -218,7 +218,7 @@ const getRequests = async (req, res, next) => {
       query.status = 'Pending';
     } else if (filter === 'team') {
       // If manager, get team member requests
-      if (['Manager', 'HR', 'Admin'].includes(req.user.role)) {
+      if (['manager', 'hr', 'admin'].includes(req.user.role)) {
         const teamUsers = await User.find({ manager: req.user.id });
         const teamUserIds = teamUsers.map(u => u._id);
         query.$or = [
@@ -228,7 +228,7 @@ const getRequests = async (req, res, next) => {
       } else {
         query.user = req.user.id; // employees only get their own
       }
-    } else if (['HR', 'Admin'].includes(req.user.role)) {
+    } else if (['hr', 'admin'].includes(req.user.role)) {
       // HR and Admin can see all requests by default if query is blank
     } else {
       query.user = req.user.id;
@@ -285,7 +285,7 @@ const getRequestById = async (req, res, next) => {
     // Authorization checks
     const isSelf = request.user._id.toString() === req.user.id;
     const isApprover = request.assignedApprover && request.assignedApprover._id.toString() === req.user.id;
-    const isHrOrAdmin = ['HR', 'Admin'].includes(req.user.role);
+    const isHrOrAdmin = ['hr', 'admin'].includes(req.user.role);
 
     if (!isSelf && !isApprover && !isHrOrAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized to view this request' });
@@ -315,7 +315,7 @@ const approveRejectRequest = async (req, res, next) => {
 
     // Authorization
     const isApprover = request.assignedApprover && request.assignedApprover.toString() === req.user.id;
-    const isAdmin = req.user.role === 'Admin';
+    const isAdmin = req.user.role === 'admin';
 
     if (!isApprover && !isAdmin) {
       return res.status(403).json({ success: false, message: 'You are not the assigned approver for this step.' });

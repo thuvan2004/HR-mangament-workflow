@@ -11,7 +11,7 @@ const connectDB = require('./src/config/db');
 // Connect to MongoDB
 connectDB();
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Allowed frontend URLs for Socket.IO
 const allowedOrigins = [

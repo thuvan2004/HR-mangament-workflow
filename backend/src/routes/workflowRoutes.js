@@ -10,8 +10,8 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 const router = express.Router();
 
 router.get('/', protect, getWorkflowTemplates);
-router.post('/', protect, authorize('Admin', 'HR'), createWorkflowTemplate);
-router.put('/:id', protect, authorize('Admin', 'HR'), updateWorkflowTemplate);
-router.delete('/:id', protect, authorize('Admin'), deleteWorkflowTemplate);
+router.post('/', protect, authorize('admin', 'hr'), createWorkflowTemplate);
+router.put('/:id', protect, authorize('admin', 'hr'), updateWorkflowTemplate);
+router.delete('/:id', protect, authorize('admin'), deleteWorkflowTemplate);
 
 module.exports = router;
