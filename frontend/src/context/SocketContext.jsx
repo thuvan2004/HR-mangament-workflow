@@ -83,8 +83,16 @@ export const SocketProvider = ({ children }) => {
     );
   };
 
+  const showToast = (message, type = 'info') => {
+    setToast({
+      id: Date.now(),
+      message,
+      type,
+    });
+  };
+
   return (
-    <SocketContext.Provider value={{ socket, notifications, clearNotifications, markAsRead }}>
+    <SocketContext.Provider value={{ socket, notifications, clearNotifications, markAsRead, showToast }}>
       {children}
 
       {/* Premium Floating Slide-In Toast Alert */}

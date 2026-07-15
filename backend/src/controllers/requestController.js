@@ -35,12 +35,11 @@ const notifyUser = async (req, recipientId, senderId, message, requestId, type) 
 // Helper to guess next approver based on role and request context
 const findApproverForRole = async (role, requester) => {
   if (role === 'manager') {
-    // Return requester's manager, otherwise fallback to any Manager/HR
+    // Return requester's manager, otherwise throw error as employee must have a manager
     if (requester.manager) {
       return requester.manager;
     }
-    const fallbackManager = await User.findOne({ role: 'manager', status: 'Active' });
-    if (fallbackManager) return fallbackManager._id;
+    throw new Error('No manager assigned to this employee.');
   }
   
   // Admin / HR fallback
@@ -283,8 +282,10 @@ const getRequestById = async (req, res, next) => {
     }
 
     // Authorization checks
-    const isSelf = request.user._id.toString() === req.user.id;
-    const isApprover = request.assignedApprover && request.assignedApprover._id.toString() === req.user.id;
+    const userIdStr = String(req.user._id || req.user.id);
+    const isSelf = String(request.user._id || request.user) === userIdStr;
+    const assignedApproverIdStr = request.assignedApprover ? String(request.assignedApprover._id || request.assignedApprover) : null;
+    const isApprover = assignedApproverIdStr === userIdStr;
     const isHrOrAdmin = ['hr', 'admin'].includes(req.user.role);
 
     if (!isSelf && !isApprover && !isHrOrAdmin) {
@@ -314,7 +315,9 @@ const approveRejectRequest = async (req, res, next) => {
     }
 
     // Authorization
-    const isApprover = request.assignedApprover && request.assignedApprover.toString() === req.user.id;
+    const userIdStr = String(req.user._id || req.user.id);
+    const assignedApproverIdStr = request.assignedApprover ? String(request.assignedApprover._id || request.assignedApprover) : null;
+    const isApprover = assignedApproverIdStr === userIdStr;
     const isAdmin = req.user.role === 'admin';
 
     if (!isApprover && !isAdmin) {

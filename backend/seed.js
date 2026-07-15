@@ -102,7 +102,12 @@ const seedData = async () => {
         },
         status: 'Pending',
         priority: 'Medium',
-        assignedApprover: managerUser._id
+        assignedApprover: managerUser._id,
+        currentStepIndex: 0,
+        workflowSteps: [
+          { stepNumber: 1, role: 'manager', label: 'Manager Review', status: 'Pending' },
+          { stepNumber: 2, role: 'hr', label: 'HR Finalization', status: 'Pending' }
+        ]
       },
       {
         user: employeeUser._id,
@@ -116,7 +121,12 @@ const seedData = async () => {
         },
         status: 'Approved',
         priority: 'Medium',
-        assignedApprover: managerUser._id
+        assignedApprover: managerUser._id,
+        currentStepIndex: 1,
+        workflowSteps: [
+          { stepNumber: 1, role: 'manager', label: 'Manager Review', status: 'Approved', completedBy: managerUser._id },
+          { stepNumber: 2, role: 'hr', label: 'HR Finalization', status: 'Approved', completedBy: hr._id }
+        ]
       },
       {
         user: employeeUser._id,
@@ -129,7 +139,12 @@ const seedData = async () => {
         },
         status: 'Rejected',
         priority: 'Low',
-        assignedApprover: managerUser._id
+        assignedApprover: managerUser._id,
+        currentStepIndex: 0,
+        workflowSteps: [
+          { stepNumber: 1, role: 'manager', label: 'Manager Review', status: 'Rejected', completedBy: managerUser._id },
+          { stepNumber: 2, role: 'hr', label: 'HR Finalization', status: 'Pending' }
+        ]
       },
       // Asset Requests (For Asset Tracking KPIs)
       {
@@ -144,7 +159,11 @@ const seedData = async () => {
         },
         status: 'Approved',
         priority: 'High',
-        assignedApprover: admin._id
+        assignedApprover: admin._id,
+        currentStepIndex: 0,
+        workflowSteps: [
+          { stepNumber: 1, role: 'admin', label: 'IT Approval', status: 'Approved', completedBy: admin._id }
+        ]
       },
       {
         user: employeeUser._id,
@@ -158,7 +177,11 @@ const seedData = async () => {
         },
         status: 'Approved',
         priority: 'Medium',
-        assignedApprover: admin._id
+        assignedApprover: admin._id,
+        currentStepIndex: 0,
+        workflowSteps: [
+          { stepNumber: 1, role: 'admin', label: 'IT Approval', status: 'Approved', completedBy: admin._id }
+        ]
       }
     ]);
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import Timeline from '../components/Timeline';
 import { 
   FiFileText, FiPlus, FiX, FiCheckCircle, FiXCircle, 
@@ -11,6 +12,7 @@ import { exportToPDF, exportToExcel } from '../utils/exportUtils';
 
 const RequestManager = () => {
   const { user } = useAuth();
+  const { showToast } = useSocket();
   
   const [activeTab, setActiveTab] = useState('me'); // 'me' or 'approvals'
   const [requests, setRequests] = useState([]);
@@ -81,7 +83,7 @@ const RequestManager = () => {
         setShowDetailModal(true);
       }
     } catch (err) {
-      alert('Could not fetch request details');
+      showToast('Could not fetch request details', 'error');
     }
   };
 
@@ -94,9 +96,10 @@ const RequestManager = () => {
       if (data.success) {
         setShowDetailModal(false);
         fetchRequests();
+        showToast(`Request ${action}d successfully.`, 'success');
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Action failed');
+      showToast(err.response?.data?.message || 'Action failed', 'error');
     }
   };
 
@@ -112,7 +115,7 @@ const RequestManager = () => {
         handleOpenDetail(selectedReq._id || selectedReq.id);
       }
     } catch (err) {
-      alert('Comment post failed');
+      showToast('Comment post failed', 'error');
     }
   };
 
@@ -167,9 +170,10 @@ const RequestManager = () => {
         setReceiptFile(null);
         setAssetName('');
         setPurpose('');
+        showToast('Request submitted successfully.', 'success');
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Submission failed');
+      showToast(err.response?.data?.message || 'Submission failed', 'error');
     }
   };
 
@@ -645,7 +649,7 @@ const RequestManager = () => {
               )}
 
               {/* Action Buttons for Assigned Reviewer */}
-              {selectedReq.status === 'Pending' && selectedReq.assignedApprover?._id === user?._id && (
+              {selectedReq.status === 'Pending' && String(selectedReq.assignedApprover?._id || selectedReq.assignedApprover) === String(user?._id || user?.id) && (
                 <div className="bg-slate-900/40 dark:bg-darkbg-800 glass-panel p-5 rounded-2xl space-y-4">
                   <h4 className="font-bold text-sm text-slate-800 dark:text-white uppercase tracking-wider">Submit Review decision</h4>
                   <div className="space-y-3.5">

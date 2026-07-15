@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import { FiUsers, FiClock, FiCheckCircle, FiXCircle, FiCalendar, FiArrowRight } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const ManagerDashboard = () => {
   const { user } = useAuth();
+  const { showToast } = useSocket();
   const [teamRequests, setTeamRequests] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,9 +53,11 @@ const ManagerDashboard = () => {
       if (data.success) {
         // Update local state
         setTeamRequests(prev => prev.map(req => req._id === id ? data.data : req));
+        showToast(`Request ${action}d successfully.`, 'success');
       }
     } catch (err) {
-      alert('Failed to process request: ' + (err.response?.data?.message || err.message));
+      const msg = err.response?.data?.message || err.message;
+      showToast('Failed to process request: ' + msg, 'error');
     } finally {
       setProcessingId(null);
     }
@@ -67,7 +71,10 @@ const ManagerDashboard = () => {
     );
   }
 
-  const pendingRequests = teamRequests.filter(r => r.status === 'Pending' && r.assignedApprover?._id === user.id);
+  const pendingRequests = teamRequests.filter(r => 
+    r.status === 'Pending' && 
+    (String(r.assignedApprover?._id || r.assignedApprover) === String(user?._id || user?.id))
+  );
   const approvedCount = teamRequests.filter(r => r.status === 'Approved').length;
   const rejectedCount = teamRequests.filter(r => r.status === 'Rejected').length;
 
