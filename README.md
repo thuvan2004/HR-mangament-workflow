@@ -12,6 +12,15 @@ FlowWise AI is a MERN Stack Enterprise SaaS platform designed to automate and st
 - **Real-Time Communication**: Socket.IO
 - **Security Protocols**: JWT Access/Refresh tokens, Password hashing, Role-based route guard shields, Express Rate-Limiters
 
+
+
+
+
+# FlowWise AI – Intelligent HR & Workflow Management System
+
+🌐 **Live Demo:** https://hrmangament.netlify.app
+
+
 ---
 
 ## Getting Started
